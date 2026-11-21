@@ -16,7 +16,7 @@ $action = strtolower($parts[0] ?? '');
 $id = $parts[1] ?? null;
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$userId = isset($_COOKIE['userID']) ? (int)$_COOKIE['userID'] : null;
+$userId = isset($_COOKIE['userID']) ? (int)$_COOKIE['userID'] : (isset($_SESSION['userID']) ? (int)$_SESSION['userID'] : null);
 $currentUser = null;
 
 if ($userId) {
@@ -25,6 +25,17 @@ if ($userId) {
         $stmt->bind_param('i', $userId);
         $stmt->execute();
         $currentUser = $stmt->get_result()->fetch_assoc() ?: null;
+    }
+}
+
+// Support raw JSON body for POST
+if (empty($_POST) && $method === 'POST') {
+    $rawInput = file_get_contents('php://input');
+    if ($rawInput) {
+        $parsed = json_decode($rawInput, true);
+        if (is_array($parsed)) {
+            $_POST = $parsed;
+        }
     }
 }
 
@@ -41,6 +52,9 @@ try {
             echo json_encode([
                 'status' => true,
                 'html' => comment_render_widget($comments, $count, $episodeId, $sort, $type, $currentUser),
+                'comments' => $comments,
+                'count' => $count,
+                'user' => $currentUser ? ['id' => $currentUser['id'], 'username' => $currentUser['username'], 'avatar' => $currentUser['image']] : null,
                 'gotoId' => null,
                 'cParentId' => null,
             ]);
@@ -54,10 +68,14 @@ try {
             $type = (string)($_GET['type'] ?? 'episode');
             $system = new CommentSystem($conn, $episodeId, $animeId);
             $comments = $system->getComments($page, 20, $sort, $type === 'all');
+            $count = $system->getCommentCount($type === 'all');
             $nextPage = count($comments) >= 20 ? $page + 1 : 0;
             echo json_encode([
                 'status' => true,
                 'html' => comment_render_list($comments, $episodeId, $type, $currentUser),
+                'comments' => $comments,
+                'count' => $count,
+                'user' => $currentUser ? ['id' => $currentUser['id'], 'username' => $currentUser['username'], 'avatar' => $currentUser['image']] : null,
                 'nextPage' => $nextPage,
             ]);
             break;
@@ -69,6 +87,7 @@ try {
             echo json_encode([
                 'status' => true,
                 'html' => comment_render_list($replies, 0, 'episode', $currentUser, true),
+                'replies' => $replies,
             ]);
             break;
 
@@ -112,6 +131,7 @@ try {
             if ($parentId > 0) {
                 echo json_encode([
                     'status' => true,
+                    'comment' => $comment,
                     'parentId' => $parentId,
                     'html' => comment_render_list([$comment], $episodeId, 'episode', $currentUser, true),
                 ]);
@@ -119,6 +139,7 @@ try {
                 $comments = $system->getComments(1, 20, 'newest', false);
                 echo json_encode([
                     'status' => true,
+                    'comment' => $comment,
                     'parentId' => 0,
                     'html' => comment_render_list($comments, $episodeId, 'episode', $currentUser),
                 ]);

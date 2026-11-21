@@ -10,3 +10,6 @@
 /.vscode/sftp.json
 
 .vercel
+
+/scratch/
+

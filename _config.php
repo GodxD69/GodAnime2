@@ -16,13 +16,13 @@ if ($conn->connect_error) {
     error_log("Database connection notice: " . $conn->connect_error);
 }
 
-$websiteTitle = "AniPaca";
+$websiteTitle = "GodAnime";
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
             (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') 
             ? "https" : "http";
 $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost:8000'));
 $websiteUrl = "{$protocol}://{$host}";
-$websiteLogo = $websiteUrl . "/public/logo/logo.png";
+$websiteLogo = $websiteUrl . "/public/logo/godanime_logo.svg";
 $contactEmail = "raisulentertainment@gmail.com";
 
 $version = "1.0.3";

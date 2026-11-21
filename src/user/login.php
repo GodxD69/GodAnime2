@@ -1,49 +1,58 @@
 <?php 
-
 require_once($_SERVER['DOCUMENT_ROOT'] . '/_config.php');
-session_start();
-
-if(isset($_COOKIE['userID'])){
-  header('location:../../home');
-  exit();
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
 }
 
+if (isset($_COOKIE['userID']) || isset($_SESSION['userID'])) {
+    header('Location: /home');
+    exit();
+}
 
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
-if(isset($_POST['submit']) || isset($_POST['anilist_login'])){
-   $login = $conn->real_escape_string($_POST['login'] ?? '');
-   $password = $_POST['password'];
-   $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-   $stmt->bind_param("ss", $_POST['login'], $_POST['login']);
+$loggedInUser = null;
+
+if (isset($_POST['submit']) || isset($_POST['anilist_login'])) {
+   $login = trim($_POST['login'] ?? '');
+   $password = (string)($_POST['password'] ?? '');
+   
+   $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1");
+   $stmt->bind_param("ss", $login, $login);
    $stmt->execute();
    $result = $stmt->get_result();
    
-   if($result->num_rows > 0){
+   if ($result->num_rows > 0) {
       $row = $result->fetch_assoc();
-      if(password_verify($_POST['password'], $row['password'])) {
-          $_SESSION['userID'] = $row['id'];
-          setcookie('userID', $row['id'], time() + 60*60*24*30*12, '/');
-          
-          if(isset($_GET['animeId'])){
-              $animeId = $_GET['animeId'];
-              header('location:../anime/'.$animeId);
-              exit();
-          } elseif(isset($_GET['redirect'])) {
-              $redirectUrl = $_GET['redirect'];
-              header('location:'.$redirectUrl);
-              exit();
-          } else {
-              header('location:../../home');
-              exit();
-          }
+      if (password_verify($password, $row['password'])) {
+          $uid = (int)$row['id'];
+          $_SESSION['userID'] = $uid;
+          setcookie('userID', (string)$uid, time() + 60*60*24*30*12, '/', '', false, false);
+          $loggedInUser = [
+              'token' => 'httpOnly',
+              'userId' => $uid,
+              'username' => $row['username'],
+              'pfp' => !empty($row['image']) ? $row['image'] : '/public/images/no-avatar.jpeg',
+              'frame' => null,
+              'plate' => null,
+              'role' => 'user',
+              'privateKey' => null
+          ];
       } else {
           $message[] = 'Incorrect password!';
       }
    } else {
       $message[] = 'User not found!';
    }
+}
+
+if ($loggedInUser) {
+    echo '<!DOCTYPE html><html><head><script>
+    try { localStorage.setItem("project_r_auth", JSON.stringify(' . json_encode($loggedInUser) . ')); } catch(e){}
+    window.location.replace("/home");
+    </script></head><body>Redirecting to GodAnime...</body></html>';
+    exit();
 }
 ?>
 

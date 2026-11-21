@@ -1,0 +1,11 @@
+{
+    "current_domain": "https://reanime.cz",
+    "candidate_domains": [
+        "https://reanime.cz",
+        "https://reanime.to"
+    ],
+    "auto_update": true,
+    "last_checked": 1795247054,
+    "status": "online",
+    "latency_ms": 1072
+}

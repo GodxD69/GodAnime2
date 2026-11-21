@@ -1,6 +1,53 @@
 
 
 
+<script>
+// 1. Purge old service worker caches
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for(var r of regs) { r.unregister(); }
+    });
+    if (window.caches) {
+        caches.keys().then(function(names) {
+            for (var name of names) { caches.delete(name); }
+        });
+    }
+}
+
+// 2. Global Anti-Ad & Popup Shield for GodAnime
+(function() {
+    var originalWindowOpen = window.open;
+    window.open = function(url, target, features) {
+        if (!url || url === 'about:blank') return null;
+        try {
+            var targetUrl = new URL(url, window.location.origin);
+            if (targetUrl.origin === window.location.origin) {
+                return originalWindowOpen.apply(window, arguments);
+            }
+        } catch(e) {}
+        console.warn('[GodAnime Shield] Blocked unauthorized ad popup:', url);
+        return null;
+    };
+
+    document.addEventListener('click', function(e) {
+        var a = e.target.closest('a');
+        if (a && a.href) {
+            try {
+                var u = new URL(a.href, window.location.origin);
+                var adList = ['aclib', 'acscdn', 'monetag', 'adcash', 'adsterra', 'popads', 'propellerads', 'yamete', 'sharethis', 'addthis'];
+                for (var i = 0; i < adList.length; i++) {
+                    if (u.hostname.indexOf(adList[i]) !== -1 || u.pathname.indexOf(adList[i]) !== -1) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        console.warn('[GodAnime Shield] Blocked ad link click:', a.href);
+                        return false;
+                    }
+                }
+            } catch(err) {}
+        }
+    }, true);
+})();
+</script>
 <div id="sidebar_menu">
     <button class="btn btn-radius btn-sm btn-secondary toggle-sidebar"><i class="fas fa-angle-left mr-2"></i>Close
         menu</button>

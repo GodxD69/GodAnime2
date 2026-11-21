@@ -57,6 +57,14 @@ if ($totalEpisodes > 0) {
     }
 }
 
+if (!empty($animeData) && empty($animeData['anilistId']) && !empty($animeId)) {
+    require_once($_SERVER['DOCUMENT_ROOT'] . '/src/api/reanime_client.php');
+    $resolvedAl = reanime_resolve_anilist((int)$animeId);
+    if ($resolvedAl) {
+        $animeData['anilistId'] = $resolvedAl;
+    }
+}
+
 $parts = parse_url($_SERVER['REQUEST_URI']);
 $page_url = explode('/', $parts['path']);
 $url = end($page_url);
@@ -128,9 +136,9 @@ $totalVotes = $like_count + $dislike_count;
     <meta property="twitter:url" content="<?= htmlspecialchars($websiteUrl) ?>/details/<?= htmlspecialchars($url) ?>">
     <meta property="twitter:card" content="summary">
     <meta name="apple-mobile-web-app-status-bar" content="#202125">
-    <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-63430163bc99824a"></script>
+    
     <meta name="theme-color" content="#202125">
-    <script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=67521dcc10699f0019237fbb&product=inline-share-buttons&source=platform" async="async"></script>
+    
     <link rel="stylesheet" href="<?= $websiteUrl ?>/src/assets/css/styles.min.css?v=<?= $version ?>">
     <link rel="apple-touch-icon" href="<?= $websiteUrl ?>/public/logo/favicon.png?v=<?= $version ?>" />
     <link rel="shortcut icon" href="<?= $websiteUrl ?>/public/logo/favicon.png?v=<?= $version ?>" type="image/x-icon" />
@@ -253,9 +261,10 @@ $totalVotes = $like_count + $dislike_count;
                                             </div>
                                         </div>
 
-                                        <iframe id="iframe-embed" src="" frameborder="0" referrerpolicy="strict-origin"
+                                        <iframe id="iframe-embed" src="" frameborder="0" referrerpolicy="no-referrer"
                                             scrolling="no"
-                                            allow="autoplay; fullscreen; geolocation; display-capture; picture-in-picture"
+                                            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-orientation-lock allow-downloads"
+                                            allow="autoplay; fullscreen; picture-in-picture; screen-wake-lock"
                                             webkitallowfullscreen mozallowfullscreen></iframe>
 
 
@@ -681,7 +690,7 @@ $totalVotes = $like_count + $dislike_count;
                                                         <span class="ml-2">Donate</span>
                                                     </button>
                                                     <button type="button"
-                                                        onclick="window.open('<?= htmlspecialchars($discord) ?>')"
+                                                        onclick="alert('Discord community link: <?= htmlspecialchars($discord) ?>')"
                                                         class="btn btn-emo rate-bad btn-vote" style="width:50%">
                                                         <i class="fab fa-discord" style="color:#6f85d5"></i>
                                                         <span class="ml-2">Join Discord</span>
@@ -914,7 +923,7 @@ $totalVotes = $like_count + $dislike_count;
             $(document).ready(function () {
                 const $iframe = $("#iframe-embed");
                 let currentServerType = localStorage.getItem('preferredServerType') || 'sub';
-                let currentServerName = localStorage.getItem('preferredServerName') || 'Kari';
+                let currentServerName = localStorage.getItem('preferredServerName') || 'HD-1 (ReAnime)';
                 let currentEpisodeId = '<?= htmlspecialchars($streaming) ?>';
                 let animeId = '<?= htmlspecialchars($animeData['id'] ?? $animeId) ?>';
                 let anilistId = '<?= htmlspecialchars((string)($animeData['anilistId'] ?? '')) ?>';
@@ -992,9 +1001,11 @@ $totalVotes = $like_count + $dislike_count;
                     }
                 }
 
-                async function fetchServers(episodeId) {
+                async function fetchServers(episodeNumber) {
                     try {
-                        const response = await fetch(`/src/ajax/server.php?episodeId=${episodeId}`);
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const ep = episodeNumber || urlParams.get('ep') || '1';
+                        const response = await fetch(`/src/ajax/server.php?ep=${encodeURIComponent(ep)}&episodeId=${encodeURIComponent(ep)}&mal=${encodeURIComponent(malId)}&anilist=${encodeURIComponent(anilistId)}`);
                         if (!response.ok) throw new Error('Network response was not ok');
                         return await response.json();
                     } catch (error) {
@@ -1004,14 +1015,16 @@ $totalVotes = $like_count + $dislike_count;
                 }
 
 
-                async function updateServerList(episodeId) {
-                    const servers = await fetchServers(episodeId);
+                async function updateServerList(episodeNumber) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const ep = episodeNumber || urlParams.get('ep') || '1';
+                    const servers = await fetchServers(ep);
                     if (!servers) return;
                     const $subList = $('.ps_-block-sub .ps__-list');
                     const $dubList = $('.ps_-block-dub .ps__-list');
                     currentServerType = localStorage.getItem('preferredServerType') || 'sub';
-                    currentServerName = localStorage.getItem('preferredServerName') || 'VidLink';
-                    const preferredServerId = (localStorage.getItem('preferredServerId') || 'vidlink').toLowerCase();
+                    currentServerName = localStorage.getItem('preferredServerName') || 'HD-1 (ReAnime)';
+                    const preferredServerId = (localStorage.getItem('preferredServerId') || 'reanime-hd1').toLowerCase();
                     const preferredServerType = localStorage.getItem('preferredServerType') || 'sub';
 
                     function renderServerButtons(list, type) {
@@ -1021,13 +1034,15 @@ $totalVotes = $like_count + $dislike_count;
                         return list.map((server) => {
                             const sId = String(server.serverId || '').toLowerCase();
                             const isActive = (preferredServerId === sId) && (preferredServerType === type);
+                            const embedUrl = server.dataLink || server.embedUrl || '';
                             return `
                     <div class="item">
                         <button class="btn btn-server ${isActive ? 'active' : ''}"
-                            data-episode-id="${episodeId}"
+                            data-episode-number="${ep}"
                             data-server-id="${server.serverId}"
                             data-server-type="${type}"
-                            data-server-name="${server.serverName}">
+                            data-server-name="${server.serverName}"
+                            data-embed="${embedUrl}">
                             ${server.serverName}
                         </button>
                     </div>`;
@@ -1063,7 +1078,7 @@ $totalVotes = $like_count + $dislike_count;
                 }
 
                 function buildVidHawkPlayerUrl(serverType, serverName, episodeNumber) {
-                    const serverSlug = String(serverName || 'vidlink').toLowerCase();
+                    const serverSlug = String(serverName || 'reanime-hd-1').toLowerCase();
                     const audio = (serverType === 'dub') ? 'dub' : 'sub';
                     const ep = encodeURIComponent(episodeNumber || '1');
                     return `<?= $websiteUrl ?>/src/player/${audio}.php?mal=${encodeURIComponent(malId)}&anilist=${encodeURIComponent(anilistId)}&server=${encodeURIComponent(serverSlug)}&embed=true&ep=${ep}`;
@@ -1077,8 +1092,9 @@ $totalVotes = $like_count + $dislike_count;
                         const serverId = $(this).data("server-id");
                         const serverType = $(this).data("server-type");
                         const serverName = $(this).data("server-name");
+                        const directEmbed = $(this).data("embed");
                         const urlParams = new URLSearchParams(window.location.search);
-                        const episodeNumber = urlParams.get('ep') || '1';
+                        const episodeNumber = urlParams.get('ep') || $(this).data("episode-number") || '1';
 
                         currentServerType = serverType;
                         currentServerName = serverName;
@@ -1086,7 +1102,7 @@ $totalVotes = $like_count + $dislike_count;
                         localStorage.setItem('preferredServerType', serverType);
                         localStorage.setItem('preferredServerName', serverName);
 
-                        const playerUrl = buildVidHawkPlayerUrl(serverType, serverId || serverName, episodeNumber);
+                        const playerUrl = directEmbed || buildVidHawkPlayerUrl(serverType, serverId || serverName, episodeNumber);
                         console.log('Setting player URL:', playerUrl);
                         $('#embed-loading').show();
                         setTimeout(() => $iframe.attr('src', playerUrl), 50);
@@ -1098,13 +1114,14 @@ $totalVotes = $like_count + $dislike_count;
 
                         $(".pc-autoskip").off("click").on("click", function () {
                             $('#embed-loading').show();
-                            $iframe.attr('src', buildVidHawkPlayerUrl(currentServerType, currentServerName, episodeNumber));
+                            $iframe.attr('src', directEmbed || buildVidHawkPlayerUrl(currentServerType, currentServerName, episodeNumber));
                             setTimeout(() => $('#embed-loading').fadeOut(250), 3000);
                         });
                     });
                 }
 
-                updateServerList(currentEpisodeId);
+                const initialUrlEp = (new URLSearchParams(window.location.search)).get('ep') || '1';
+                updateServerList(initialUrlEp);
 
                 function selectEpisode(episodeNumber) {
                     console.log('Selecting episode:', episodeNumber);
@@ -1132,7 +1149,7 @@ $totalVotes = $like_count + $dislike_count;
                 $episodeItems.each(function () {
                     $(this).on("click", async function () {
                         const episodeId = $(this).attr("data-id");
-                        const episodeNumber = $(this).attr("data-number");
+                        const episodeNumber = $(this).attr("data-number") || '1';
                         currentEpisodeId = episodeId;
 
                         $episodeItems.removeClass("active");
@@ -1154,7 +1171,9 @@ $totalVotes = $like_count + $dislike_count;
                             episodeNumber: parseInt(episodeNumber)
                         });
 
-                        await updateServerList(episodeId);
+                        $('#servers-loading').show();
+                        $('#servers-mixed').hide();
+                        await updateServerList(episodeNumber);
 
                         updateNavigationButtons();
                     });

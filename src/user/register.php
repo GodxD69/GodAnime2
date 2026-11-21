@@ -113,8 +113,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
                 if ($insert_stmt->execute()) {
-                    $message[] = "Registration successful!";
-                    header('location:/login');
+                    $_SESSION['userID'] = $next_id;
+                    setcookie('userID', (string)$next_id, time() + 60*60*24*30*12, '/', '', false, false);
+                    $userObj = [
+                        'token' => 'httpOnly',
+                        'userId' => $next_id,
+                        'username' => $username,
+                        'pfp' => $image ?: '/public/images/no-avatar.jpeg',
+                        'frame' => null,
+                        'plate' => null,
+                        'role' => 'user',
+                        'privateKey' => null
+                    ];
+                    echo '<!DOCTYPE html><html><head><script>
+                    try { localStorage.setItem("project_r_auth", JSON.stringify(' . json_encode($userObj) . ')); } catch(e){}
+                    window.location.replace("/home");
+                    </script></head><body>Account created! Entering GodAnime...</body></html>';
                     exit();
                 } else {
                     $message[] = "Registration failed: " . $insert_stmt->error;
