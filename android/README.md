@@ -1,58 +1,56 @@
-# GodAnime Native Android Web App
+# GodAnime Android App (GodAnime.apk)
 
-A lightweight, high-performance, battery-friendly native Android Web App for **GodAnime** (`https://godanime2.vercel.app`).
-
----
-
-## Features
-
-- **Blazing Fast WebView Engine**: Optimized with hardware acceleration, DOM storage, database caching, and responsive viewport sizing.
-- **HTML5 Fullscreen Video**: Custom `WebChromeClient` automatically rotates anime video playback to immersive landscape and hides system status/navigation bars.
-- **Native Android Download Manager**: Tapping download buttons directly initiates downloads through Android's native `DownloadManager` with notification progress, saving files directly to the user's `Downloads` directory (`Environment.DIRECTORY_DOWNLOADS`).
-- **Swipe-To-Refresh**: GodAnime orange themed pull-to-refresh (`SwipeRefreshLayout`).
-- **Offline Fallback UI**: Graceful offline detection with a "Retry Connection" button when internet connectivity is lost.
-- **Avatar Upload Support**: Native Android file picker integration (`onShowFileChooser`) allowing users to easily choose photos for their profile picture.
-- **Smart Back Navigation**: Back button navigates through anime pages history; double-tap back within 2 seconds confirms exiting the app.
-- **GodAnime Theme**: Status bar and navigation bar stay dark (`#0C0D10`), perfectly matching GodAnime's Black + Orange design.
+Official lightweight, high-performance native Android Web App for **GodAnime** (`https://godanime2.vercel.app`).
 
 ---
 
-## How to Build the APK
+## 🚀 How to Download the GodAnime APK
 
-### Prerequisites
-- [Android Studio Iguana+](https://developer.android.com/studio) or command-line Gradle with Android SDK 34 installed.
-- JDK 17 or higher.
+### Method 1: Instant Download from GitHub (Easiest - No Android Studio Needed)
+Because we have automated GitHub Actions set up on this repository:
+1. Go to your repository on GitHub: **[https://github.com/GodxD69/Anipaca](https://github.com/GodxD69/Anipaca)** (or your fork).
+2. Click on the **Actions** tab at the top.
+3. Click on the latest workflow run named **"Build GodAnime APK"**.
+4. Scroll down to the **Artifacts** section at the bottom of the page.
+5. Click **GodAnime-APK** to download `GodAnime.zip`.
+6. Extract the zip file on your phone or PC — inside you will find **`GodAnime.apk`**!
+7. Tap `GodAnime.apk` on your Android phone to install.
 
-### Option 1: Using Android Studio (Recommended)
-1. Open Android Studio.
-2. Select **File > Open...** and choose the `android/` directory in this repository.
-3. Allow Gradle to sync.
-4. Connect an Android phone with USB debugging enabled, or launch an Android emulator.
+---
+
+### Method 2: Build Locally using Android Studio
+1. Open [Android Studio](https://developer.android.com/studio).
+2. Select **File > Open...** and navigate to the `android/` directory inside this repository.
+3. Wait a moment for Gradle to sync.
+4. Plug in your Android phone with USB Debugging enabled, or start an Android Emulator.
 5. Click **Run > Run 'app'** (or press `Shift + F10`).
-6. To generate a signed release APK: **Build > Generate Signed Bundle / APK... > APK**.
+6. To export the APK file directly:
+   - Go to **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+   - When finished, click **locate** in the popup notification to get your `GodAnime.apk`.
 
-### Option 2: Using the Command Line
+---
+
+### Method 3: Build via Command Line
 ```bash
 cd android
 
-# Build debug APK
+# Linux / Mac
+chmod +x gradlew
 ./gradlew assembleDebug
 
-# Output APK path:
-# android/app/build/outputs/apk/debug/app-debug.apk
-
-# Build release APK
-./gradlew assembleRelease
-
-# Output APK path:
-# android/app/build/outputs/apk/release/app-release-unsigned.apk
+# Windows (Command Prompt / PowerShell)
+gradlew.bat assembleDebug
 ```
+The compiled APK will be located at:
+`android/app/build/outputs/apk/debug/GodAnime.apk`
 
 ---
 
-## Changing the Target URL
-The default URL is set to `https://godanime2.vercel.app/home`.  
-To change this, open `android/app/src/main/java/com/godanime/app/MainActivity.java` and modify:
-```java
-public static final String DEFAULT_URL = "https://godanime2.vercel.app/home";
-```
+## ✨ Features Included
+
+- **Custom GodAnime App Icon**: Pre-configured with the official GodAnime brand logo across all Android screen densities.
+- **HTML5 Fullscreen Video Engine**: Anime player seamlessly rotates to immersive fullscreen landscape upon tapping the fullscreen button.
+- **Native Android Download Manager**: Streaming downloads save straight into your Android device's `Downloads` folder with real-time download notification progress.
+- **Edge-to-Edge Dark Interface**: Matching GodAnime's Black + Orange theme (`#0C0D10` and `#FF6B00`).
+- **Swipe-to-Refresh**: Native pull-down to refresh with GodAnime orange accent.
+- **Offline Recovery Screen**: Shows a clean retry button if you temporarily lose internet connection.

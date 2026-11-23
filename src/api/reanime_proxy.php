@@ -683,20 +683,6 @@ function reanime_proxy_serve(): void
                     ],
                     $assetData
                 );
-
-                // Strip Community button from navigation menus in JS chunks
-                $assetData = preg_replace('/\{name:\s*"Community"[^}]+\},?/', '', $assetData);
-
-                // Strip decorative corner divs that cause weird jagged shape on WATCH NOW hero button hover
-                $assetData = str_replace(
-                    [
-                        '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div> <div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
-                        '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div>',
-                        '<div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
-                    ],
-                    '',
-                    $assetData
-                );
             }
 
             @file_put_contents($cacheFile, $assetData);
@@ -1090,16 +1076,6 @@ function reanime_proxy_serve(): void
         );
 
         // 2. Disable Community / Stranger Global Chat in SvelteKit SSR state & Sync Local Auth
-        $html = str_replace(
-            [
-                '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div> <div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
-                '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div>',
-                '<div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
-            ],
-            '',
-            $html
-        );
-
         $html = str_replace(
             [
                 'globalChatOff:false',
@@ -1518,16 +1494,20 @@ try {
             var n = notices[j].closest(".notice") || notices[j];
             n.remove();
         }
-        // Remove community navigation button in mobile / bottom nav
-        var commLinks = document.querySelectorAll("nav a[href*=\'/community\'], div.fixed a[href*=\'/community\'], a[href=\'/community\'], a[href*=\'/community\']");
-        for (var ci = 0; ci < commLinks.length; ci++) {
-            commLinks[ci].remove();
-        }
-        // Remove weird protruding corner tabs on WATCH NOW hero button
-        var cornerTabs = document.querySelectorAll("button.-skew-x-12 div.bg-black\\/20, button.-skew-x-12 div.bg-white\\/20, button.-skew-x-12 div[class*=\'-top-1.5\'], button.-skew-x-12 div[class*=\'-bottom-1.5\']");
-        for (var cti = 0; cti < cornerTabs.length; cti++) {
-            cornerTabs[cti].remove();
-        }
+        // Hide community navigation button in mobile / bottom nav
+        try {
+            var commLinks = document.querySelectorAll("nav a[href*=\'/community\'], div.fixed a[href*=\'/community\'], a[href=\'/community\'], a[href*=\'/community\']");
+            for (var ci = 0; ci < commLinks.length; ci++) {
+                commLinks[ci].style.setProperty("display", "none", "important");
+            }
+        } catch(e) {}
+        // Hide weird protruding corner tabs on WATCH NOW hero button
+        try {
+            var cornerTabs = document.querySelectorAll("button.-skew-x-12 div[class*=\'-top-1.5\'], button.-skew-x-12 div[class*=\'-bottom-1.5\']");
+            for (var cti = 0; cti < cornerTabs.length; cti++) {
+                cornerTabs[cti].style.setProperty("display", "none", "important");
+            }
+        } catch(e) {}
         if (window.__GODANIME_USER__.isLoggedIn) {
             var loginOverlays = document.querySelectorAll(".login-overlay-wrap, .login-overlay");
             for (var k = 0; k < loginOverlays.length; k++) {

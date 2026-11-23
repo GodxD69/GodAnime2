@@ -5,3 +5,4 @@
    public void *(android.webkit.WebView, java.lang.String);
 }
 -dontwarn android.webkit.**
+
