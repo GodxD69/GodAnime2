@@ -644,6 +644,8 @@ function reanime_proxy_serve(): void
                         '//reanime.app',
                         // Bust browser disk cache for DqVyHEVv chunk
                         'DqVyHEVv.js',
+                        'navigator.serviceWorker.register("/sw.js")',
+                        'navigator.serviceWorker.register(\'/sw.js\')',
                     ],
                     [
                         'GodAnime. All rights reserved.',
@@ -676,7 +678,23 @@ function reanime_proxy_serve(): void
                         $localOrigin,
                         '//' . $host,
                         'DqVyHEVv.v2.js',
+                        '(Promise.resolve())',
+                        '(Promise.resolve())',
                     ],
+                    $assetData
+                );
+
+                // Strip Community button from navigation menus in JS chunks
+                $assetData = preg_replace('/\{name:\s*"Community"[^}]+\},?/', '', $assetData);
+
+                // Strip decorative corner divs that cause weird jagged shape on WATCH NOW hero button hover
+                $assetData = str_replace(
+                    [
+                        '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div> <div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
+                        '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div>',
+                        '<div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
+                    ],
+                    '',
                     $assetData
                 );
             }
@@ -975,8 +993,7 @@ function reanime_proxy_serve(): void
     }
 
     http_response_code($httpCode ?: 200);
-    // Explicitly prevent browser caching of HTML and purge stale browser disk cache
-    header('Clear-Site-Data: "cache"');
+    // Explicitly prevent browser caching of HTML (no Clear-Site-Data to prevent phone Chrome subresource aborts)
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
     header('Expires: 0');
@@ -1073,6 +1090,16 @@ function reanime_proxy_serve(): void
         );
 
         // 2. Disable Community / Stranger Global Chat in SvelteKit SSR state & Sync Local Auth
+        $html = str_replace(
+            [
+                '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div> <div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
+                '<div class="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center bg-black/20"></div>',
+                '<div class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center bg-white/20"></div>',
+            ],
+            '',
+            $html
+        );
+
         $html = str_replace(
             [
                 'globalChatOff:false',
@@ -1281,13 +1308,35 @@ try {
     // 1. BULLETPROOF 3RD-PARTY REDIRECT & AD POPUP SHIELD
     // =========================================================
 
-    // Complete lock on window.open: blocks all unauthorized popups & ad tabs
+    function isDownloadTarget(el, url) {
+        var s = (url || "").toLowerCase();
+        if (s.indexOf("/download") !== -1 || s.indexOf("download=") !== -1 || /\.(?:mp4|mkv|zip|rar|7z|torrent|apk)(?:\?|$)/i.test(s) || /(?:gogo|mediafire|mega\.nz|streamwish|filemoon|dood|mp4upload|vidhide|gofile|krakenfiles|pixeldrain)/i.test(s)) {
+            return true;
+        }
+        if (el) {
+            if (el.hasAttribute && (el.hasAttribute("download") || (el.getAttribute("href") && isDownloadTarget(null, el.getAttribute("href"))))) return true;
+            var t = (el.textContent || "").toLowerCase();
+            if (t.indexOf("download") !== -1) return true;
+            var aria = (el.getAttribute && (el.getAttribute("aria-label") || el.getAttribute("title")) || "").toLowerCase();
+            if (aria.indexOf("download") !== -1) return true;
+            if (el.closest) {
+                var closestA = el.closest("a");
+                if (closestA && (closestA.hasAttribute("download") || isDownloadTarget(null, closestA.href || closestA.getAttribute("href")) || (closestA.textContent || "").toLowerCase().indexOf("download") !== -1)) return true;
+                var closestBtn = el.closest("button");
+                if (closestBtn && ((closestBtn.textContent || "").toLowerCase().indexOf("download") !== -1 || (closestBtn.getAttribute("aria-label") || "").toLowerCase().indexOf("download") !== -1)) return true;
+            }
+        }
+        return false;
+    }
+
+    // Complete lock on window.open: blocks all unauthorized popups & ad tabs, whitelists legitimate downloads
     var _realOpen = window.open;
     window.open = function(url, target, features) {
         if (!url || url === "about:blank") return { focus: function(){}, close: function(){}, closed: true };
         var sUrl = String(url);
         var isLocal = sUrl.indexOf(window.location.host) !== -1 || sUrl.indexOf("localhost") !== -1 || sUrl.startsWith("/") || sUrl.startsWith("#");
-        if (!isLocal) {
+        var isDl = isDownloadTarget(null, sUrl);
+        if (!isLocal && !isDl) {
             console.warn("[GodAnime Shield] Blocked unauthorized ad popup / 3rd-party window to:", sUrl);
             return { focus: function(){}, close: function(){}, closed: true };
         }
@@ -1317,6 +1366,10 @@ try {
         var anchor = el && el.closest ? el.closest("a") : null;
         if (anchor) {
             var href = anchor.getAttribute("href") || "";
+            // Always whitelist legitimate download links
+            if (isDownloadTarget(anchor, href)) {
+                return;
+            }
             if (href === "/") {
                 e.preventDefault();
                 window.location.href = "/home";
@@ -1361,6 +1414,10 @@ try {
         // Intercept buttons that trigger login dialog
         var btn = el && el.closest ? el.closest("button") : null;
         if (btn) {
+            // Always whitelist legitimate download buttons
+            if (isDownloadTarget(btn, "")) {
+                return;
+            }
             var btnText = (btn.textContent || "").trim().toLowerCase();
             if (btnText === "login" || btn.getAttribute("aria-label") === "Login") {
                 if (!window.__GODANIME_USER__.isLoggedIn) {
@@ -1420,16 +1477,19 @@ try {
                 if (href === "/") {
                     node.setAttribute("href", "/home");
                 }
+                // Whitelist legitimate download links
+                if (isDownloadTarget(node, href)) {
+                    return;
+                }
                 if (/^(?:https?:)?\/\//i.test(href) && href.indexOf(window.location.host) === -1 && href.indexOf("localhost") === -1) {
                     node.setAttribute("href", "#");
                     node.removeAttribute("target");
                 }
             }
 
-            // Secure Video Player iframes against ad popups and top navigation redirects
+            // Secure Video Player iframes against ad popups and top navigation redirects (allowing downloads)
             if (node.tagName === "IFRAME") {
-                // Strict sandbox: NO allow-top-navigation, NO allow-popups, NO allow-downloads
-                node.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-presentation allow-orientation-lock");
+                node.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-presentation allow-orientation-lock allow-downloads");
                 node.setAttribute("allow", "autoplay; fullscreen; encrypted-media; picture-in-picture");
             }
 
@@ -1457,6 +1517,16 @@ try {
         for (var j = 0; j < notices.length; j++) {
             var n = notices[j].closest(".notice") || notices[j];
             n.remove();
+        }
+        // Remove community navigation button in mobile / bottom nav
+        var commLinks = document.querySelectorAll("nav a[href*=\'/community\'], div.fixed a[href*=\'/community\'], a[href=\'/community\'], a[href*=\'/community\']");
+        for (var ci = 0; ci < commLinks.length; ci++) {
+            commLinks[ci].remove();
+        }
+        // Remove weird protruding corner tabs on WATCH NOW hero button
+        var cornerTabs = document.querySelectorAll("button.-skew-x-12 div.bg-black\\/20, button.-skew-x-12 div.bg-white\\/20, button.-skew-x-12 div[class*=\'-top-1.5\'], button.-skew-x-12 div[class*=\'-bottom-1.5\']");
+        for (var cti = 0; cti < cornerTabs.length; cti++) {
+            cornerTabs[cti].remove();
         }
         if (window.__GODANIME_USER__.isLoggedIn) {
             var loginOverlays = document.querySelectorAll(".login-overlay-wrap, .login-overlay");
@@ -1888,6 +1958,35 @@ div:has(> a[href*="discord"]) {
   margin: 0 !important;
   padding: 0 !important;
   border: none !important;
+}
+
+/* Fix weird corner tabs sticking out of WATCH NOW hero button on hover */
+button.-skew-x-12 {
+  overflow: hidden !important;
+}
+button.-skew-x-12 > div.bg-black\/20,
+button.-skew-x-12 > div.bg-white\/20,
+button.-skew-x-12 > div[class*="-top-1.5"],
+button.-skew-x-12 > div[class*="-bottom-1.5"],
+button[class*="-skew-x-12"] > div[class*="-top-1.5"],
+button[class*="-skew-x-12"] > div[class*="-bottom-1.5"],
+button[class*="-skew-x-12"] > div[class*="size-5"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  max-width: 0 !important;
+}
+
+/* Mobile bottom bar 4-column distribution when Community is removed */
+nav.grid-cols-5,
+nav[class*="grid-cols-5"],
+div[class*="grid-cols-5"]:has(> a[href*="/home"]),
+div[class*="grid-cols-5"]:has(> a[href*="/schedule"]) {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 }
 
 /* Hide Sign In Required overlay when user is logged in & unblur settings */

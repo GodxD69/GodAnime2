@@ -90,9 +90,14 @@ $embedUrl = htmlspecialchars($embedUrl, ENT_QUOTES, 'UTF-8');
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script>
-        // Anti-Popup Shield for player shim
-        window.open = function() { return null; };
-        try { Object.defineProperty(window, "open", { value: function(){ return null; }, writable: false }); } catch(e){}
+        // Anti-Popup Shield for player shim (whitelisting download URLs)
+        var _realOpen = window.open;
+        window.open = function(url, target, features) {
+            if (url && (String(url).indexOf('/download') !== -1 || /\.(?:mp4|mkv|zip|torrent)/i.test(url) || /(?:gogo|mediafire|mega|streamwish|filemoon|dood|mp4upload|vidhide|gofile|download)/i.test(url))) {
+                return _realOpen ? _realOpen.apply(window, arguments) : null;
+            }
+            return null;
+        };
     </script>
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
@@ -100,6 +105,6 @@ $embedUrl = htmlspecialchars($embedUrl, ENT_QUOTES, 'UTF-8');
     </style>
 </head>
 <body>
-    <iframe src="<?= $embedUrl ?>" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; screen-wake-lock" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-orientation-lock"></iframe>
+    <iframe src="<?= $embedUrl ?>" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; screen-wake-lock" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-orientation-lock allow-downloads"></iframe>
 </body>
 </html>

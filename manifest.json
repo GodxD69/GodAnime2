@@ -1,7 +1,7 @@
 {
-    "short_name": "AniPca",
-    "name": "AniPaca",
-    "description": "<?=$websiteDescription?>",
+    "short_name": "GodAnime",
+    "name": "GodAnime",
+    "description": "Watch Anime Online in High Quality on GodAnime - English Subbed and Dubbed Anime Streaming",
     "icons": [
         {
             "src": "/public/logo/touch-icon-192x192.png",
@@ -22,15 +22,14 @@
             "purpose": "any"
         }
     ],
-    "start_url": "/home?source=pwa",
+    "start_url": "/home",
     "scope": "/",
     "display": "standalone",
-    "display_override": ["window-controls-overlay"],
     "orientation": "any",
-    "background_color": "#202125",
-    "theme_color": "#202125",
+    "background_color": "#0C0D10",
+    "theme_color": "#FF6B00",
     "prefer_related_applications": false,
-    "categories": ["utilities"],
+    "categories": ["entertainment", "video"],
     "shortcuts": [
         {
             "name": "Home",
@@ -44,12 +43,5 @@
         }
     ],
     "lang": "en",
-    "dir": "ltr",
-    "id": "/?source=pwa",
-    "launch_handler": {
-        "client_mode": ["navigate-existing", "auto"]
-    },
-    "edge_side_panel": {
-        "preferred_width": 400
-    }
+    "dir": "ltr"
 }

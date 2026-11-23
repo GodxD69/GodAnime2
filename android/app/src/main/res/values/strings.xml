@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GodAnime</string>
+    <string name="offline_title">No Internet Connection</string>
+    <string name="offline_desc">Please check your network and tap retry to reload GodAnime.</string>
+    <string name="retry">Retry</string>
+    <string name="press_again_to_exit">Press back again to exit</string>
+    <string name="download_started">Downloading: %s</string>
+    <string name="download_failed">Download failed</string>
+    <string name="permission_required">Storage permission required for downloads</string>
+</resources>

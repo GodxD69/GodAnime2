@@ -24,6 +24,20 @@ if (!file_exists($requestedFile)) {
     $requestedFile = __DIR__ . '/' . ltrim($uriPath, '/\\');
 }
 
+// 0. Direct Service Worker & Manifest handling (essential for mobile Chrome / PWA)
+if ($uriPath === '/sw.js' || $uriPath === '/service-worker.js') {
+    header('Content-Type: application/javascript; charset=utf-8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    readfile(__DIR__ . '/sw.js');
+    exit;
+}
+if ($uriPath === '/manifest.json') {
+    header('Content-Type: application/manifest+json; charset=utf-8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    readfile(__DIR__ . '/manifest.json');
+    exit;
+}
+
 // 0. Direct Home Redirection: Bypasses the splash search screen and leaderboard completely
 if ($uriPath === '/' || $uriPath === '' || $uriPath === '/home.php' || $uriPath === '/index.php' || $uriPath === '/leaderboard' || strpos($uriPath, '/leaderboard') === 0) {
     header('Location: /home', true, 302);
